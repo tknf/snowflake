@@ -39,9 +39,9 @@ const id = generateSnowflakeId(); // "1234567890123456791"
 import { createSnowflake } from '@tknf/snowflake';
 
 const generateId = createSnowflake({
-	epoch: 1640995200000,     // Custom epoch (2022-01-01)
-	datacenterId: 1,          // Datacenter ID (0-31)
-	workerId: 5               // Worker ID (0-31)
+  epoch: 1640995200000,     // Custom epoch (2022-01-01)
+  datacenterId: 1,          // Datacenter ID (0-31)
+  workerId: 5               // Worker ID (0-31)
 });
 
 const id = generateId();
@@ -74,16 +74,16 @@ const id3 = generateFromEnv({ workerId: 10 });
 ```typescript
 // src/browser.ts - Browser specific utilities
 import { 
-	createSnowflakeFromStorage, 
-	generateFromStorage,
-	initializeBrowserConfig,
-	saveConfigToStorage 
+  createSnowflakeFromStorage, 
+  generateFromStorage,
+  initializeBrowserConfig,
+  saveConfigToStorage 
 } from '@tknf/snowflake/browser';
 
 // Initialize browser-specific config (auto-generated from browser characteristics)
 const config = initializeBrowserConfig({ 
-	save: true, // Save to localStorage
-	config: { epoch: 1640995200000 } // Optional custom config
+  save: true, // Save to localStorage
+  config: { epoch: 1640995200000 } // Optional custom config
 });
 
 // Create generator using localStorage + browser fingerprint
@@ -116,9 +116,9 @@ Creates a Snowflake ID generator function.
 
 ```typescript
 const generator = createSnowflake({
-	epoch: 1577836800000,
-	datacenterId: 1,
-	workerId: 2
+  epoch: 1577836800000,
+  datacenterId: 1,
+  workerId: 2
 });
 
 const id = generator(); // "1234567890123456789"
@@ -135,8 +135,8 @@ Generates a single Snowflake ID.
 
 ```typescript
 const id = generateSnowflakeId({
-	datacenterId: 1,
-	workerId: 2
+  datacenterId: 1,
+  workerId: 2
 });
 ```
 
@@ -294,8 +294,8 @@ Initializes browser-specific configuration with optional localStorage persistenc
 
 ```typescript
 const config = initializeBrowserConfig({
-	save: true,
-	config: { epoch: 1640995200000 }
+  save: true,
+  config: { epoch: 1640995200000 }
 });
 ```
 
@@ -340,7 +340,7 @@ const generator = createSnowflake({ workerId: 1 });
 // Generate 1000 IDs quickly
 const ids = [];
 for (let i = 0; i < 1000; i++) {
-	ids.push(generator());
+  ids.push(generator());
 }
 
 // All IDs are unique and sortable
@@ -368,17 +368,17 @@ import { initializeBrowserConfig, createSnowflakeFromStorage } from '@tknf/snowf
 
 // Initialize on app startup
 const config = initializeBrowserConfig({ 
-	save: true, // Persist across browser sessions
-	config: { epoch: 1640995200000 }
+  save: true, // Persist across browser sessions
+  config: { epoch: 1640995200000 }
 });
 
 const generator = createSnowflakeFromStorage();
 
 // Use in your app
 function createNewRecord() {
-	const id = generator();
-	console.log('New record ID:', id);
-	return id;
+  const id = generator();
+  console.log('New record ID:', id);
+  return id;
 }
 ```
 
@@ -387,18 +387,18 @@ function createNewRecord() {
 ```typescript
 // Cloudflare Worker example
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
-		const generator = createSnowflake({
-			datacenterId: 1,
-			workerId: parseInt(env.WORKER_ID) || 0
-		});
-		
-		const id = generator();
-		
-		return new Response(JSON.stringify({ id }), {
-			headers: { 'Content-Type': 'application/json' }
-		});
-	}
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const generator = createSnowflake({
+      datacenterId: 1,
+      workerId: parseInt(env.WORKER_ID) || 0
+    });
+    
+    const id = generator();
+    
+    return new Response(JSON.stringify({ id }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 };
 ```
 
@@ -422,7 +422,7 @@ console.log(config1.workerId === config2.workerId); // true - same browser = sam
 ### Setup
 
 ```bash
-git clone <repository>
+git clone git@github.com:tknf/snowflake.git
 cd snowflake
 pnpm install
 ```
@@ -453,10 +453,13 @@ pnpm run typecheck
 
 ```
 src/
-├── index.ts          # Core Snowflake logic (platform-agnostic)
+├── index.ts         # Core Snowflake logic (platform-agnostic)
 ├── node.ts          # Node.js-specific utilities
+├── browser.ts       # Browser-specific utilities
+├── iife.ts          # IIFE build for browser usage
 ├── index.test.ts    # Core functionality tests
-└── node.test.ts     # Node.js utilities tests
+├── node.test.ts     # Node.js utilities tests
+└── browser.test.ts  # Browser utilities tests
 ```
 
 ## Requirements
