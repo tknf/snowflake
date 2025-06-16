@@ -14,6 +14,9 @@
 		"type": "git",
 		"url": "https://github.com/tknf/snowflake.git"
 	},
+	"publishConfig": {
+		"access": "public"
+	},
 	"license": "MIT",
 	"author": "tknf <dev@tknf.net>",
 	"type": "module",
@@ -48,7 +51,8 @@
 		"test:coverage": "vitest run --coverage",
 		"lint": "biome lint",
 		"format": "biome format",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"prepublishOnly": "npm run build && npm run typecheck && npm run lint"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
