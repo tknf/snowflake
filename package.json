@@ -1,6 +1,6 @@
 {
 	"name": "@tknf/snowflake",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "A zero-dependency TypeScript library for generating sortable unique IDs for distributed systems",
 	"keywords": [
 		"id",
@@ -43,8 +43,8 @@
 	"files": [
 		"dist"
 	],
-	"unpkg": "./dist/iife/snowflake.js",
-	"jsdelivr": "./dist/iife/snowflake.js",
+	"unpkg": "./dist/snowflake.min.js",
+	"jsdelivr": "./dist/snowflake.min.js",
 	"scripts": {
 		"build": "tsup",
 		"test": "vitest run",
