@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Snowflake Browser Example</title>
+		<style>
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+				max-width: 900px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #f8fafc;
+				line-height: 1.6;
+			}
+
+			.container {
+				background: white;
+				padding: 24px;
+				border-radius: 12px;
+				box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+				margin-bottom: 24px;
+			}
+
+			.section {
+				margin-bottom: 32px;
+			}
+
+			.section h2 {
+				color: #1e293b;
+				border-bottom: 3px solid #3b82f6;
+				padding-bottom: 8px;
+				margin-bottom: 16px;
+			}
+
+			.button-group {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+				margin: 16px 0;
+			}
+
+			button {
+				background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+				color: white;
+				border: none;
+				padding: 12px 20px;
+				border-radius: 8px;
+				cursor: pointer;
+				font-weight: 500;
+				transition: all 0.2s;
+				font-size: 14px;
+			}
+
+			button:hover {
+				background: linear-gradient(135deg, #2563eb, #1e40af);
+				transform: translateY(-1px);
+				box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+			}
+
+			button:active {
+				transform: translateY(0);
+			}
+
+			button:disabled {
+				background: #94a3b8;
+				cursor: not-allowed;
+				transform: none;
+				box-shadow: none;
+			}
+
+			.output {
+				background: #f1f5f9;
+				border: 1px solid #e2e8f0;
+				border-radius: 8px;
+				padding: 16px;
+				margin: 16px 0;
+				font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New',
+					monospace;
+				white-space: pre-wrap;
+				max-height: 300px;
+				overflow-y: auto;
+				font-size: 13px;
+			}
+
+			.input-group {
+				margin: 12px 0;
+				display: flex;
+				align-items: center;
+				gap: 12px;
+			}
+
+			.input-group label {
+				font-weight: 600;
+				color: #374151;
+				min-width: 140px;
+			}
+
+			.input-group input {
+				padding: 8px 12px;
+				border: 2px solid #e5e7eb;
+				border-radius: 6px;
+				font-size: 14px;
+				transition: border-color 0.2s;
+			}
+
+			.input-group input:focus {
+				outline: none;
+				border-color: #3b82f6;
+				box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+			}
+
+			.config-display {
+				background: linear-gradient(135deg, #eff6ff, #dbeafe);
+				border: 2px solid #bfdbfe;
+				border-radius: 8px;
+				padding: 16px;
+				margin: 16px 0;
+			}
+
+			.status {
+				padding: 12px 16px;
+				border-radius: 8px;
+				margin: 12px 0;
+				font-weight: 500;
+			}
+
+			.status.success {
+				background: #dcfce7;
+				color: #166534;
+				border: 1px solid #bbf7d0;
+			}
+
+			.status.error {
+				background: #fef2f2;
+				color: #991b1b;
+				border: 1px solid #fecaca;
+			}
+
+			.status.warning {
+				background: #fefce8;
+				color: #a16207;
+				border: 1px solid #fde68a;
+			}
+
+			.tabs {
+				display: flex;
+				border-bottom: 2px solid #e5e7eb;
+				margin-bottom: 20px;
+			}
+
+			.tab {
+				padding: 12px 24px;
+				cursor: pointer;
+				border-bottom: 3px solid transparent;
+				font-weight: 500;
+				color: #6b7280;
+				transition: all 0.2s;
+			}
+
+			.tab.active {
+				color: #3b82f6;
+				border-bottom-color: #3b82f6;
+			}
+
+			.tab:hover:not(.active) {
+				color: #374151;
+				background: #f9fafb;
+			}
+
+			.tab-content {
+				display: none;
+			}
+
+			.tab-content.active {
+				display: block;
+			}
+
+			.stats-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 16px;
+				margin: 16px 0;
+			}
+
+			.stat-card {
+				background: #f8fafc;
+				padding: 16px;
+				border-radius: 8px;
+				text-align: center;
+			}
+
+			.stat-value {
+				font-size: 24px;
+				font-weight: bold;
+				color: #3b82f6;
+			}
+
+			.stat-label {
+				color: #6b7280;
+				font-size: 14px;
+			}
+
+			.highlight {
+				background: linear-gradient(135deg, #fef3c7, #fde68a);
+				padding: 2px 6px;
+				border-radius: 4px;
+				font-weight: 500;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🔥 Snowflake Browser Example</h1>
+			<p>
+				This example demonstrates the Snowflake ID generator library in a modern browser environment using
+				<span class="highlight">Vite</span> and <span class="highlight">TypeScript</span>. All browser-specific
+				utilities including localStorage integration and fingerprinting are showcased.
+			</p>
+		</div>
+
+		<div class="container">
+			<div class="tabs">
+				<div class="tab active" data-tab="basic">Basic Generation</div>
+				<div class="tab" data-tab="browser">Browser Features</div>
+				<div class="tab" data-tab="storage">Storage Management</div>
+				<div class="tab" data-tab="analysis">ID Analysis</div>
+				<div class="tab" data-tab="performance">Performance</div>
+			</div>
+
+			<!-- Basic Generation Tab -->
+			<div class="tab-content active" id="basic-tab">
+				<div class="section">
+					<h2>Basic ID Generation</h2>
+					<div class="button-group">
+						<button onclick="app.generateBasicId()">Generate Single ID</button>
+						<button onclick="app.generateMultipleIds()">Generate 10 IDs</button>
+						<button onclick="app.clearOutput('basic-output')">Clear</button>
+					</div>
+					<div id="basic-output" class="output"></div>
+				</div>
+
+				<div class="section">
+					<h2>Custom Configuration</h2>
+					<div class="input-group">
+						<label>Custom Epoch:</label>
+						<input type="number" id="custom-epoch" placeholder="1577836800000" />
+					</div>
+					<div class="input-group">
+						<label>Datacenter ID:</label>
+						<input type="number" id="custom-datacenter" min="0" max="31" placeholder="0-31" />
+					</div>
+					<div class="input-group">
+						<label>Worker ID:</label>
+						<input type="number" id="custom-worker" min="0" max="31" placeholder="0-31" />
+					</div>
+					<div class="button-group">
+						<button onclick="app.generateWithCustomConfig()">Generate with Custom Config</button>
+					</div>
+					<div id="custom-output" class="output"></div>
+				</div>
+			</div>
+
+			<!-- Browser Features Tab -->
+			<div class="tab-content" id="browser-tab">
+				<div class="section">
+					<h2>Browser Fingerprinting</h2>
+					<div class="config-display">
+						<strong>Current Browser Fingerprint:</strong>
+						<div id="browser-fingerprint"></div>
+					</div>
+					<div class="button-group">
+						<button onclick="app.showBrowserFingerprint()">Show Browser Fingerprint</button>
+						<button onclick="app.generateFromBrowserConfig()">Generate with Browser Config</button>
+					</div>
+					<div id="browser-output" class="output"></div>
+				</div>
+
+				<div class="section">
+					<h2>Automatic Configuration</h2>
+					<p>
+						Browser-specific configuration is automatically generated based on your browser's characteristics
+						for consistent worker/datacenter ID assignment.
+					</p>
+					<div class="button-group">
+						<button onclick="app.initializeBrowserConfig(true)">Initialize & Save Config</button>
+						<button onclick="app.initializeBrowserConfig(false)">Initialize Config (No Save)</button>
+					</div>
+					<div id="init-output" class="output"></div>
+				</div>
+			</div>
+
+			<!-- Storage Management Tab -->
+			<div class="tab-content" id="storage-tab">
+				<div class="section">
+					<h2>LocalStorage Configuration</h2>
+					<div class="input-group">
+						<label>Epoch:</label>
+						<input type="number" id="storage-epoch" placeholder="1577836800000" />
+					</div>
+					<div class="input-group">
+						<label>Datacenter ID:</label>
+						<input type="number" id="storage-datacenter" min="0" max="31" placeholder="0-31" />
+					</div>
+					<div class="input-group">
+						<label>Worker ID:</label>
+						<input type="number" id="storage-worker" min="0" max="31" placeholder="0-31" />
+					</div>
+					<div class="button-group">
+						<button onclick="app.saveConfigToStorage()">Save to Storage</button>
+						<button onclick="app.loadConfigFromStorage()">Load from Storage</button>
+						<button onclick="app.clearStoredConfig()">Clear Storage</button>
+					</div>
+					<div id="storage-status" class="status"></div>
+					<div id="storage-output" class="output"></div>
+				</div>
+
+				<div class="section">
+					<h2>Generate from Storage</h2>
+					<p>Generate IDs using configuration stored in localStorage with browser fingerprint fallbacks.</p>
+					<div class="button-group">
+						<button onclick="app.generateFromStorage()">Generate from Storage</button>
+						<button onclick="app.createGeneratorFromStorage()">Create Generator from Storage</button>
+					</div>
+					<div id="storage-gen-output" class="output"></div>
+				</div>
+			</div>
+
+			<!-- ID Analysis Tab -->
+			<div class="tab-content" id="analysis-tab">
+				<div class="section">
+					<h2>ID Analysis</h2>
+					<div class="input-group">
+						<label>Snowflake ID:</label>
+						<input type="text" id="parse-input" placeholder="Enter Snowflake ID" style="min-width: 300px" />
+					</div>
+					<div class="input-group">
+						<label>Parse Epoch:</label>
+						<input type="number" id="parse-epoch" placeholder="1577836800000 (optional)" />
+					</div>
+					<div class="button-group">
+						<button onclick="app.parseSnowflakeId()">Parse ID</button>
+						<button onclick="app.getIdTimestamp()">Get Timestamp</button>
+						<button onclick="app.convertToDate()">Convert to Date</button>
+					</div>
+					<div id="parse-output" class="output"></div>
+				</div>
+
+				<div class="section">
+					<h2>ID Comparison</h2>
+					<div class="button-group">
+						<button onclick="app.compareIds()">Generate & Compare IDs</button>
+						<button onclick="app.demonstrateSorting()">Demonstrate Time Sorting</button>
+					</div>
+					<div id="compare-output" class="output"></div>
+				</div>
+			</div>
+
+			<!-- Performance Tab -->
+			<div class="tab-content" id="performance-tab">
+				<div class="section">
+					<h2>Performance Testing</h2>
+					<div class="input-group">
+						<label>Count:</label>
+						<input type="number" id="perf-count" value="10000" min="1000" max="100000" />
+					</div>
+					<div class="button-group">
+						<button onclick="app.performanceTest()">Run Performance Test</button>
+						<button onclick="app.benchmarkDifferentConfigs()">Benchmark Configs</button>
+					</div>
+					<div class="stats-grid" id="perf-stats"></div>
+					<div id="performance-output" class="output"></div>
+				</div>
+
+				<div class="section">
+					<h2>Memory Usage</h2>
+					<div class="button-group">
+						<button onclick="app.memoryUsageTest()">Test Memory Usage</button>
+						<button onclick="app.garbageCollectionTest()">GC Pressure Test</button>
+					</div>
+					<div id="memory-output" class="output"></div>
+				</div>
+			</div>
+		</div>
+
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

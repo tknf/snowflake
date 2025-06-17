@@ -1,0 +1,8 @@
+{
+	"name": "snowflake-examples-iife",
+	"private": true,
+	"license": "MIT",
+	"scripts": {
+		"start": "npx serve"
+	}
+}

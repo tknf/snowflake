@@ -2,7 +2,6 @@ dist/
 sandbox/
 
 # Cloudflare Workers
-worker
 .wrangler
 
 # logs

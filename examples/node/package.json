@@ -1,0 +1,11 @@
+{
+	"name": "snowflake-examples-node",
+	"private": true,
+	"license": "MIT",
+	"scripts": {
+		"start": "tsx main.ts"
+	},
+	"devDependencies": {
+		"tsx": "^4.20.3"
+	}
+}

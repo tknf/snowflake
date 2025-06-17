@@ -1,0 +1,8 @@
+{
+	"name": "snowflake-examples-service-worker",
+	"private": true,
+	"license": "MIT",
+	"scripts": {
+		"start": "npx serve"
+	}
+}
