@@ -1,6 +1,21 @@
+<div align="center">
+  <img src="https://raw.githubusercontent.com/tknf/snowflake/main/docs/snowflake.png" alt="Snowflake Logo" width="500" height="auto">
+</div>
+
 # @tknf/snowflake
 
 A zero-dependency TypeScript library for generating sortable unique IDs for distributed systems.
+
+<hr />
+
+[![Github Workflow Status](https://img.shields.io/github/actions/workflow/status/tknf/snowflake/ci.yaml?branch=main)](https://github.com/tknf/snowflake/actions)
+[![Github](https://img.shields.io/github/license/tknf/snowflake)](https://github.com/tknf/snowflake/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/@tknf/snowflake)](https://www.npmjs.com/package/@tknf/snowflake)
+[![npm bundle size](https://img.shields.io/bundlephobia/min/@tknf/snowflake)](https://bundlephobia.com/package/@tknf/snowflake)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@tknf/snowflake)](https://bundlephobia.com/package/@tknf/snowflake)
+[![Github commit activity](https://img.shields.io/github/commit-activity/m/tknf/snowflake)](https://github.com/tknf/snowflake/pulse)
+[![GitHub last commit](https://img.shields.io/github/last-commit/tknf/snowflake)](https://github.com/tknf/snowflake/commits/main)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tknf/snowflake)
 
 ## Features
 
