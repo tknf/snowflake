@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Snowflake IIFE Example</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #f5f5f5;
+			}
+
+			.container {
+				background: white;
+				padding: 20px;
+				border-radius: 8px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+				margin-bottom: 20px;
+			}
+
+			.section {
+				margin-bottom: 30px;
+			}
+
+			.section h2 {
+				color: #333;
+				border-bottom: 2px solid #007cba;
+				padding-bottom: 5px;
+			}
+
+			button {
+				background: #007cba;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				margin: 5px;
+			}
+
+			button:hover {
+				background: #005a87;
+			}
+
+			.output {
+				background: #f8f9fa;
+				border: 1px solid #dee2e6;
+				border-radius: 4px;
+				padding: 10px;
+				margin: 10px 0;
+				font-family: monospace;
+				white-space: pre-wrap;
+				max-height: 200px;
+				overflow-y: auto;
+			}
+
+			.input-group {
+				margin: 10px 0;
+			}
+
+			.input-group label {
+				display: inline-block;
+				width: 120px;
+				font-weight: bold;
+			}
+
+			.input-group input {
+				padding: 5px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				width: 100px;
+			}
+
+			.config-display {
+				background: #e9f5ff;
+				border: 1px solid #b3d9ff;
+				border-radius: 4px;
+				padding: 10px;
+				margin: 10px 0;
+			}
+
+			.error {
+				color: #dc3545;
+				background: #f8d7da;
+				border: 1px solid #f5c6cb;
+				border-radius: 4px;
+				padding: 10px;
+				margin: 10px 0;
+			}
+
+			.success {
+				color: #155724;
+				background: #d4edda;
+				border: 1px solid #c3e6cb;
+				border-radius: 4px;
+				padding: 10px;
+				margin: 10px 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🔥 Snowflake IIFE Example</h1>
+			<p>This example demonstrates the Snowflake ID generator library using the IIFE (Immediately Invoked Function
+				Expression) build.</p>
+		</div>
+
+		<div class="container section">
+			<h2>Basic ID Generation</h2>
+			<button onclick="generateBasicId()">Generate ID</button>
+			<button onclick="generateMultipleIds()">Generate 10 IDs</button>
+			<button onclick="clearOutput('basic-output')">Clear</button>
+			<div id="basic-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>Browser Configuration</h2>
+			<div class="config-display">
+				<strong>Current Browser Fingerprint:</strong>
+				<div id="browser-fingerprint"></div>
+			</div>
+			<button onclick="showBrowserFingerprint()">Show Browser Fingerprint</button>
+			<button onclick="generateFromBrowserConfig()">Generate with Browser Config</button>
+			<div id="browser-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>LocalStorage Configuration</h2>
+			<div class="input-group">
+				<label>Epoch:</label>
+				<input type="number" id="epoch-input" placeholder="1577836800000">
+			</div>
+			<div class="input-group">
+				<label>Datacenter ID:</label>
+				<input type="number" id="datacenter-input" min="0" max="31" placeholder="0-31">
+			</div>
+			<div class="input-group">
+				<label>Worker ID:</label>
+				<input type="number" id="worker-input" min="0" max="31" placeholder="0-31">
+			</div>
+			<button onclick="saveConfigToStorage()">Save to Storage</button>
+			<button onclick="loadConfigFromStorage()">Load from Storage</button>
+			<button onclick="clearStoredConfig()">Clear Storage</button>
+			<button onclick="generateFromStorage()">Generate from Storage</button>
+			<div id="storage-status"></div>
+			<div id="storage-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>Custom Configuration</h2>
+			<div class="input-group">
+				<label>Custom Epoch:</label>
+				<input type="number" id="custom-epoch" placeholder="1577836800000">
+			</div>
+			<div class="input-group">
+				<label>Custom DC ID:</label>
+				<input type="number" id="custom-datacenter" min="0" max="31" placeholder="0-31">
+			</div>
+			<div class="input-group">
+				<label>Custom Worker ID:</label>
+				<input type="number" id="custom-worker" min="0" max="31" placeholder="0-31">
+			</div>
+			<button onclick="generateWithCustomConfig()">Generate with Custom Config</button>
+			<div id="custom-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>ID Analysis</h2>
+			<div class="input-group">
+				<label>Snowflake ID:</label>
+				<input type="text" id="parse-input" placeholder="Enter Snowflake ID" style="width: 300px;">
+			</div>
+			<div class="input-group">
+				<label>Parse Epoch:</label>
+				<input type="number" id="parse-epoch" placeholder="1577836800000">
+			</div>
+			<button onclick="parseSnowflakeId()">Parse ID</button>
+			<button onclick="getIdTimestamp()">Get Timestamp</button>
+			<button onclick="convertToDate()">Convert to Date</button>
+			<div id="parse-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>Performance Test</h2>
+			<div class="input-group">
+				<label>Count:</label>
+				<input type="number" id="perf-count" value="10000" min="1000" max="100000">
+			</div>
+			<button onclick="performanceTest()">Run Performance Test</button>
+			<div id="performance-output" class="output"></div>
+		</div>
+
+		<script src="/snowflake.min.js"></script>
+		<script src="/main.js"></script>
+	</body>
+</html>

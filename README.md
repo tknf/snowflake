@@ -4,12 +4,13 @@ A zero-dependency TypeScript library for generating sortable unique IDs for dist
 
 ## Features
 
-- **Multi-platform Support**: Works in browsers, Node.js, and Edge Workers (Cloudflare Workers, etc.)
+- **Multi-platform Support**: Works in browsers, Node.js, Service Workers, and Edge Workers (Cloudflare Workers, etc.)
 - **Zero Dependencies**: Lightweight with no external dependencies
 - **Functional Style**: Pure functions without classes
 - **Time-sortable**: IDs are chronologically sortable
 - **High Performance**: Fast ID generation with built-in sequence handling
 - **TypeScript**: Full type support with comprehensive type definitions
+- **Service Worker Support**: Generate IDs in background contexts without blocking the main thread
 
 ## Installation
 
@@ -382,6 +383,40 @@ function createNewRecord() {
 }
 ```
 
+### Service Workers
+
+```typescript
+// Service Worker example
+// sw.js
+importScripts('https://unpkg.com/@tknf/snowflake/dist/snowflake.min.js');
+
+self.addEventListener('message', (event) => {
+  if (event.data.type === 'GENERATE_ID') {
+    const generator = Snowflake.createSnowflake({
+      datacenterId: 1,
+      workerId: 5
+    });
+    
+    const id = generator();
+    
+    // Send back to main thread
+    self.clients.matchAll().then(clients => {
+      for (const client of clients) {
+        client.postMessage({
+          type: 'ID_GENERATED',
+          data: { id }
+        });
+      }
+    });
+  }
+});
+
+// Main thread
+navigator.serviceWorker.controller.postMessage({
+  type: 'GENERATE_ID'
+});
+```
+
 ### Cloudflare Workers
 
 ```typescript
@@ -415,6 +450,39 @@ console.log('Browser fingerprint:', fingerprint);
 const config1 = generateBrowserConfig();
 const config2 = generateBrowserConfig();
 console.log(config1.workerId === config2.workerId); // true - same browser = same workerId
+```
+
+## Examples
+
+The library includes comprehensive examples for different environments:
+
+- **`examples/iife/`**: IIFE browser example with localStorage integration
+- **`examples/node/`**: Node.js example with environment variables
+- **`examples/worker/`**: Service Worker example with background generation
+
+Each example includes:
+- Complete working code
+- Performance testing
+- Error handling
+- Detailed README with setup instructions
+
+### Running Examples
+
+```bash
+# IIFE Browser Example
+cd examples/iife
+pnpm install
+pnpm run start
+
+# Node.js Example  
+cd examples/node
+pnpm install
+pnpm run start
+
+# Service Worker Example
+cd examples/worker
+pnpm install
+pnpm run start
 ```
 
 ## Development
@@ -460,6 +528,11 @@ src/
 ├── index.test.ts    # Core functionality tests
 ├── node.test.ts     # Node.js utilities tests
 └── browser.test.ts  # Browser utilities tests
+
+examples/
+├── iife/            # IIFE browser example
+├── node/            # Node.js example
+└── worker/          # Service Worker example
 ```
 
 ## Requirements

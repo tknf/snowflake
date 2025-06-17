@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Snowflake Service Worker Example</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #f5f5f5;
+			}
+
+			.container {
+				background: white;
+				padding: 20px;
+				border-radius: 8px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+				margin-bottom: 20px;
+			}
+
+			.section {
+				margin-bottom: 30px;
+			}
+
+			.section h2 {
+				color: #333;
+				border-bottom: 2px solid #007cba;
+				padding-bottom: 5px;
+			}
+
+			button {
+				background: #007cba;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				margin: 5px;
+			}
+
+			button:hover {
+				background: #005a87;
+			}
+
+			button:disabled {
+				background: #ccc;
+				cursor: not-allowed;
+			}
+
+			.output {
+				background: #f8f9fa;
+				border: 1px solid #dee2e6;
+				border-radius: 4px;
+				padding: 10px;
+				margin: 10px 0;
+				font-family: monospace;
+				white-space: pre-wrap;
+				max-height: 200px;
+				overflow-y: auto;
+			}
+
+			.status {
+				padding: 10px;
+				border-radius: 4px;
+				margin: 10px 0;
+				font-weight: bold;
+			}
+
+			.status.success {
+				background: #d4edda;
+				color: #155724;
+				border: 1px solid #c3e6cb;
+			}
+
+			.status.error {
+				background: #f8d7da;
+				color: #721c24;
+				border: 1px solid #f5c6cb;
+			}
+
+			.status.warning {
+				background: #fff3cd;
+				color: #856404;
+				border: 1px solid #ffeaa7;
+			}
+
+			.input-group {
+				margin: 10px 0;
+			}
+
+			.input-group label {
+				display: inline-block;
+				width: 120px;
+				font-weight: bold;
+			}
+
+			.input-group input {
+				padding: 5px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				width: 100px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🔥 Snowflake Service Worker Example</h1>
+			<p>
+				This example demonstrates the Snowflake ID generator library working inside a Service Worker. The Service
+				Worker runs independently from the main thread and can generate IDs in the background.
+			</p>
+		</div>
+
+		<div class="container section">
+			<h2>Service Worker Status</h2>
+			<div id="sw-status" class="status warning">Initializing...</div>
+			<button onclick="registerServiceWorker()" id="register-btn">Register Service Worker</button>
+			<button onclick="unregisterServiceWorker()" id="unregister-btn" disabled>Unregister Service Worker</button>
+		</div>
+
+		<div class="container section">
+			<h2>Basic ID Generation in Service Worker</h2>
+			<button onclick="generateIdInWorker()" id="generate-btn" disabled>Generate ID in Worker</button>
+			<button onclick="generateMultipleIdsInWorker()" id="generate-multiple-btn" disabled>
+				Generate 10 IDs in Worker
+			</button>
+			<button onclick="clearOutput('worker-output')">Clear</button>
+			<div id="worker-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>Custom Configuration in Service Worker</h2>
+			<div class="input-group">
+				<label>Datacenter ID:</label>
+				<input type="number" id="datacenter-input" min="0" max="31" value="5" />
+			</div>
+			<div class="input-group">
+				<label>Worker ID:</label>
+				<input type="number" id="worker-input" min="0" max="31" value="10" />
+			</div>
+			<button onclick="generateWithConfigInWorker()" id="generate-config-btn" disabled>
+				Generate with Custom Config
+			</button>
+			<div id="config-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>Performance Test in Service Worker</h2>
+			<div class="input-group">
+				<label>Count:</label>
+				<input type="number" id="perf-count" value="1000" min="100" max="10000" />
+			</div>
+			<button onclick="performanceTestInWorker()" id="perf-btn" disabled>Run Performance Test in Worker</button>
+			<div id="performance-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>ID Analysis in Service Worker</h2>
+			<div class="input-group">
+				<label>Snowflake ID:</label>
+				<input type="text" id="parse-input" placeholder="Enter Snowflake ID" style="width: 300px" />
+			</div>
+			<button onclick="parseIdInWorker()" id="parse-btn" disabled>Parse ID in Worker</button>
+			<div id="parse-output" class="output"></div>
+		</div>
+
+		<div class="container section">
+			<h2>Background ID Generation</h2>
+			<p>Test continuous ID generation in the background while the main thread remains responsive.</p>
+			<button onclick="startBackgroundGeneration()" id="start-bg-btn" disabled>Start Background Generation</button>
+			<button onclick="stopBackgroundGeneration()" id="stop-bg-btn" disabled>Stop Background Generation</button>
+			<div id="background-output" class="output"></div>
+		</div>
+
+		<script>
+			let serviceWorker = null;
+			let backgroundGenerationActive = false;
+
+			function log(elementId, message, isError = false) {
+				const element = document.getElementById(elementId);
+				if (!element) return;
+
+				const timestamp = new Date().toLocaleTimeString();
+				const prefix = isError ? "❌ ERROR" : "✅";
+
+				const line = document.createElement("div");
+				line.style.color = isError ? "#dc3545" : "#28a745";
+				line.textContent = `[${timestamp}] ${prefix} ${message}`;
+
+				element.appendChild(line);
+				element.scrollTop = element.scrollHeight;
+			}
+
+			function clearOutput(elementId) {
+				const element = document.getElementById(elementId);
+				if (element) {
+					element.innerHTML = "";
+				}
+			}
+
+			function updateStatus(message, type = "warning") {
+				const statusElement = document.getElementById("sw-status");
+				statusElement.textContent = message;
+				statusElement.className = `status ${type}`;
+			}
+
+			function updateButtonStates(workerRegistered) {
+				document.getElementById("register-btn").disabled = workerRegistered;
+				document.getElementById("unregister-btn").disabled = !workerRegistered;
+				document.getElementById("generate-btn").disabled = !workerRegistered;
+				document.getElementById("generate-multiple-btn").disabled = !workerRegistered;
+				document.getElementById("generate-config-btn").disabled = !workerRegistered;
+				document.getElementById("perf-btn").disabled = !workerRegistered;
+				document.getElementById("parse-btn").disabled = !workerRegistered;
+				document.getElementById("start-bg-btn").disabled = !workerRegistered;
+				document.getElementById("stop-bg-btn").disabled = !workerRegistered || !backgroundGenerationActive;
+			}
+
+			async function registerServiceWorker() {
+				try {
+					if (!("serviceWorker" in navigator)) {
+						throw new Error("Service Workers are not supported in this browser");
+					}
+
+					updateStatus("Registering Service Worker...", "warning");
+
+					const registration = await navigator.serviceWorker.register("./sw.js");
+					serviceWorker = registration;
+
+					// Wait for the service worker to be ready
+					await navigator.serviceWorker.ready;
+
+					updateStatus("Service Worker registered and ready!", "success");
+					updateButtonStates(true);
+
+					log("worker-output", "Service Worker registered successfully");
+
+					// Set up message handling
+					navigator.serviceWorker.addEventListener("message", handleWorkerMessage);
+				} catch (error) {
+					updateStatus(`Failed to register Service Worker: ${error.message}`, "error");
+					log("worker-output", `Registration failed: ${error.message}`, true);
+				}
+			}
+
+			async function unregisterServiceWorker() {
+				try {
+					if (serviceWorker) {
+						await serviceWorker.unregister();
+						serviceWorker = null;
+						updateStatus("Service Worker unregistered", "warning");
+						updateButtonStates(false);
+						log("worker-output", "Service Worker unregistered");
+					}
+				} catch (error) {
+					updateStatus(`Failed to unregister Service Worker: ${error.message}`, "error");
+					log("worker-output", `Unregistration failed: ${error.message}`, true);
+				}
+			}
+
+			function handleWorkerMessage(event) {
+				const { type, data, error, requestId } = event.data;
+
+				if (error) {
+					const targetElement = getTargetElementForRequest(requestId);
+					log(targetElement, `Error: ${error}`, true);
+					return;
+				}
+
+				switch (type) {
+					case "ID_GENERATED":
+						log("worker-output", `Generated ID: ${data.id}`);
+						break;
+					case "MULTIPLE_IDS_GENERATED":
+						log("worker-output", `Generated ${data.ids.length} IDs:`);
+						data.ids.forEach((id, index) => {
+							log("worker-output", `  ${index + 1}: ${id}`);
+						});
+						break;
+					case "CONFIG_ID_GENERATED":
+						log("config-output", `Generated with config: ${data.id}`);
+						log("config-output", `Config: ${JSON.stringify(data.config)}`);
+						break;
+					case "PERFORMANCE_RESULT":
+						log("performance-output", `Generated ${data.count} IDs in ${data.duration.toFixed(2)}ms`);
+						log("performance-output", `Performance: ${data.idsPerSecond.toLocaleString()} IDs/second`);
+						log("performance-output", `All IDs unique: ${data.allUnique ? "✅ Yes" : "❌ No"}`);
+						break;
+					case "ID_PARSED":
+						log("parse-output", `Parsed ID: ${data.originalId}`);
+						log("parse-output", `  Timestamp: ${data.parsed.timestamp}`);
+						log("parse-output", `  Date: ${data.parsed.date}`);
+						log("parse-output", `  Datacenter ID: ${data.parsed.datacenterId}`);
+						log("parse-output", `  Worker ID: ${data.parsed.workerId}`);
+						log("parse-output", `  Sequence: ${data.parsed.sequence}`);
+						break;
+					case "BACKGROUND_ID":
+						log("background-output", `Background ID: ${data.id} (Total: ${data.count})`);
+						break;
+					case "BACKGROUND_STOPPED":
+						log("background-output", `Background generation stopped. Total generated: ${data.totalCount}`);
+						document.getElementById("stop-bg-btn").disabled = true;
+						backgroundGenerationActive = false;
+						break;
+				}
+			}
+
+			function getTargetElementForRequest(requestId) {
+				// Simple mapping of request types to output elements
+				if (requestId?.includes("config")) return "config-output";
+				if (requestId?.includes("perf")) return "performance-output";
+				if (requestId?.includes("parse")) return "parse-output";
+				if (requestId?.includes("background")) return "background-output";
+				return "worker-output";
+			}
+
+			function sendMessageToWorker(message) {
+				if (navigator.serviceWorker.controller) {
+					navigator.serviceWorker.controller.postMessage(message);
+				} else {
+					log("worker-output", "No active Service Worker controller", true);
+				}
+			}
+
+			function generateIdInWorker() {
+				sendMessageToWorker({
+					type: "GENERATE_ID",
+					requestId: "generate_" + Date.now(),
+				});
+			}
+
+			function generateMultipleIdsInWorker() {
+				sendMessageToWorker({
+					type: "GENERATE_MULTIPLE_IDS",
+					data: { count: 10 },
+					requestId: "generate_multiple_" + Date.now(),
+				});
+			}
+
+			function generateWithConfigInWorker() {
+				const datacenterId = parseInt(document.getElementById("datacenter-input").value) || 0;
+				const workerId = parseInt(document.getElementById("worker-input").value) || 0;
+
+				sendMessageToWorker({
+					type: "GENERATE_WITH_CONFIG",
+					data: {
+						config: { datacenterId, workerId },
+					},
+					requestId: "config_" + Date.now(),
+				});
+			}
+
+			function performanceTestInWorker() {
+				const count = parseInt(document.getElementById("perf-count").value) || 1000;
+
+				sendMessageToWorker({
+					type: "PERFORMANCE_TEST",
+					data: { count },
+					requestId: "perf_" + Date.now(),
+				});
+			}
+
+			function parseIdInWorker() {
+				const id = document.getElementById("parse-input").value.trim();
+				if (!id) {
+					log("parse-output", "Please enter a Snowflake ID", true);
+					return;
+				}
+
+				sendMessageToWorker({
+					type: "PARSE_ID",
+					data: { id },
+					requestId: "parse_" + Date.now(),
+				});
+			}
+
+			function startBackgroundGeneration() {
+				backgroundGenerationActive = true;
+				document.getElementById("stop-bg-btn").disabled = false;
+
+				sendMessageToWorker({
+					type: "START_BACKGROUND_GENERATION",
+					requestId: "background_" + Date.now(),
+				});
+
+				log("background-output", "Started background ID generation...");
+			}
+
+			function stopBackgroundGeneration() {
+				backgroundGenerationActive = false;
+
+				sendMessageToWorker({
+					type: "STOP_BACKGROUND_GENERATION",
+					requestId: "background_stop_" + Date.now(),
+				});
+			}
+
+			// Auto-register service worker on page load
+			document.addEventListener("DOMContentLoaded", () => {
+				// Check if service worker is already registered
+				if ("serviceWorker" in navigator) {
+					navigator.serviceWorker.getRegistration().then((registration) => {
+						if (registration) {
+							serviceWorker = registration;
+							updateStatus("Service Worker already registered!", "success");
+							updateButtonStates(true);
+							navigator.serviceWorker.addEventListener("message", handleWorkerMessage);
+						} else {
+							updateStatus("Service Worker not registered. Click to register.", "warning");
+						}
+					});
+				} else {
+					updateStatus("Service Workers not supported in this browser", "error");
+				}
+
+				// Auto-fill sample ID for parsing
+				setTimeout(() => {
+					// We'll generate this on the main thread just for the placeholder
+					document.getElementById("parse-input").placeholder = "Click 'Generate ID in Worker' first";
+				}, 100);
+			});
+
+			// Keyboard shortcuts
+			document.addEventListener("keydown", (event) => {
+				if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+					event.preventDefault();
+					if (!document.getElementById("generate-btn").disabled) {
+						generateIdInWorker();
+					}
+				}
+
+				if (event.key === "Escape") {
+					event.preventDefault();
+					["worker-output", "config-output", "performance-output", "parse-output", "background-output"].forEach(
+						clearOutput
+					);
+				}
+			});
+		</script>
+	</body>
+</html>
