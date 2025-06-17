@@ -1,15 +1,15 @@
 {
 	"compilerOptions": {
-		"target": "ES2020",
+		"target": "ES2022",
 		"module": "ESNext",
 		"moduleResolution": "bundler",
-		"strict": true,
+		"allowImportingTsExtensions": true,
+		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
-		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
-		"declaration": true,
-		"outDir": "./dist",
-		"rootDir": "./src"
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "**/*.test.ts"]
