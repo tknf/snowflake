@@ -17,6 +17,7 @@ jobs:
       - run: pnpm run build
       - run: pnpm run lint
       - run: pnpm run format
+      - run: pnpm run test
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
