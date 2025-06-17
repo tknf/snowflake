@@ -15,7 +15,8 @@
 		"url": "https://github.com/tknf/snowflake.git"
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
 	},
 	"license": "MIT",
 	"author": "tknf <dev@tknf.net>",
