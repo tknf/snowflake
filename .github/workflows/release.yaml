@@ -18,6 +18,16 @@ jobs:
       - run: pnpm run lint
       - run: pnpm run format
       - run: pnpm run test
+      - name: Check NPM_TOKEN existence
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "Error: NPM_TOKEN is empty!"
+            exit 1
+          else
+            echo "NPM_TOKEN is set (but not showing value for security)."
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
