@@ -1,10 +1,8 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/tknf/snowflake/main/docs/snowflake.png" alt="Snowflake Logo" width="500" height="auto">
+  <img src="https://raw.githubusercontent.com/tknf/snowflake/main/docs/snowflake.png" alt="Snowflake Logo" width="250" height="auto">
+  <h1>@tknf/snowflake</h1>
+  <p>A zero-dependency TypeScript library for generating sortable unique IDs for distributed systems</p>
 </div>
-
-# @tknf/snowflake
-
-A zero-dependency TypeScript library for generating sortable unique IDs for distributed systems.
 
 <hr />
 
@@ -17,7 +15,7 @@ A zero-dependency TypeScript library for generating sortable unique IDs for dist
 [![GitHub last commit](https://img.shields.io/github/last-commit/tknf/snowflake)](https://github.com/tknf/snowflake/commits/main)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tknf/snowflake)
 
-## Features
+## ✨ Features
 
 - **Multi-platform Support**: Works in browsers, Node.js, Service Workers, and Edge Workers (Cloudflare Workers, etc.)
 - **Zero Dependencies**: Lightweight with no external dependencies
@@ -27,13 +25,13 @@ A zero-dependency TypeScript library for generating sortable unique IDs for dist
 - **TypeScript**: Full type support with comprehensive type definitions
 - **Service Worker Support**: Generate IDs in background contexts without blocking the main thread
 
-## Installation
+## 📦 Installation
 
 ```bash
 npm install @tknf/snowflake
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Basic Usage
 
@@ -114,7 +112,7 @@ saveConfigToStorage({ datacenterId: 5, workerId: 10 });
 const id3 = generateFromStorage();
 ```
 
-## API Reference
+## 📚 API Reference
 
 ### Core Functions
 
@@ -346,7 +344,7 @@ unused   | timestamp | datacenter| worker   | sequence
 - **Worker ID (5 bits)**: Identifies the worker process (0-31)  
 - **Sequence (12 bits)**: Counter for same-millisecond generation (0-4095)
 
-## Examples
+## 💡 Examples
 
 ### High-Frequency Generation
 
@@ -467,7 +465,7 @@ const config2 = generateBrowserConfig();
 console.log(config1.workerId === config2.workerId); // true - same browser = same workerId
 ```
 
-## Examples
+## Example Usage
 
 The library includes comprehensive examples for different environments:
 
@@ -500,7 +498,7 @@ pnpm install
 pnpm run start
 ```
 
-## Development
+## 🛠️ Development
 
 ### Setup
 
@@ -550,17 +548,17 @@ examples/
 └── worker/          # Service Worker example
 ```
 
-## Requirements
+## 🔧 Requirements
 
 - **Runtime**: No runtime dependencies
 - **Development**: Node.js 18+ for building and testing
 - **TypeScript**: Full type support included
 
-## License
+## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -569,6 +567,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 5. Ensure linting passes: `pnpm run lint`
 6. Submit a pull request
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 This implementation follows the distributed ID generation pattern, designed for high-performance unique ID generation in distributed systems.
