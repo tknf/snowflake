@@ -30,5 +30,8 @@
 			"semicolons": "always",
 			"trailingCommas": "es5"
 		}
+	},
+	"json": {
+		"formatter": { "enabled": false }
 	}
 }
