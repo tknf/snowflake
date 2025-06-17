@@ -1,8 +1,15 @@
 {
 	"name": "@tknf/snowflake",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "A zero-dependency TypeScript library for generating sortable unique IDs for distributed systems",
-	"keywords": ["id", "snowflake", "distributed", "typescript", "uuid", "generator"],
+	"keywords": [
+		"id",
+		"snowflake",
+		"distributed",
+		"typescript",
+		"uuid",
+		"generator"
+	],
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/tknf/snowflake.git"
@@ -33,7 +40,9 @@
 			"require": "./dist/browser.cjs"
 		}
 	},
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"unpkg": "./dist/snowflake.min.js",
 	"jsdelivr": "./dist/snowflake.min.js",
 	"scripts": {
