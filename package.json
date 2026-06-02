@@ -1,6 +1,6 @@
 {
 	"name": "@tknf/snowflake",
-	"version": "1.0.2",
+	"version": "1.1.0",
 	"description": "A zero-dependency TypeScript library for generating sortable unique IDs for distributed systems",
 	"keywords": [
 		"distributed",
