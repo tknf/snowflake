@@ -143,3 +143,7 @@ settings.local.json
 .DS_Store
 
 tmp/
+
+# Vite+ (git hooks and per-developer editor configs are generated locally by `vp config`)
+.vite-hooks/
+.zed/

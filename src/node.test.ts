@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ENV_VARS, createSnowflakeFromEnv, generateFromEnv, loadConfigFromEnv } from "./node.js";
 
 describe("Node.js Utilities", () => {

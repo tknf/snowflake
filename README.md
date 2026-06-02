@@ -556,34 +556,34 @@ pnpm run start
 
 ## 🛠️ Development
 
+This project uses [Vite+](https://viteplus.dev) as its unified toolchain — bundling with tsdown, linting with Oxlint, formatting with Oxfmt, and testing with Vitest, all driven by the `vp` CLI.
+
 ### Setup
 
 ```bash
 git clone git@github.com:tknf/snowflake.git
 cd snowflake
-pnpm install
+vp install
 ```
 
-### Scripts
+### Commands
 
 ```bash
 # Build the library
-pnpm run build
+vp pack
 
 # Run tests
-pnpm run test
+vp test run
 
 # Run tests with coverage
-pnpm run test:coverage
+vp test run --coverage
 
-# Lint code
-pnpm run lint
+# Format + lint + type-check in one pass
+vp check
 
-# Format code
-pnpm run format
-
-# Type check
-pnpm run typecheck
+# Lint only / format only
+vp lint
+vp fmt
 ```
 
 ### Project Structure
@@ -619,8 +619,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Ensure tests pass: `pnpm run test`
-5. Ensure linting passes: `pnpm run lint`
+4. Ensure checks pass: `vp check`
+5. Ensure tests pass: `vp test`
 6. Submit a pull request
 
 ## 🙏 Acknowledgments
