@@ -145,7 +145,11 @@ export const generateSnowflakeId = (config: SnowflakeConfig = {}): string => {
  * and `sequence` are returned as `null` and the raw 22-bit value is returned as `entropy`.
  * In `"default"` mode the worker fields are returned and `entropy` is `null`.
  */
-export const parseSnowflakeId = (id: string, epoch = DEFAULT_EPOCH, mode: SnowflakeMode = "default") => {
+export const parseSnowflakeId = (
+	id: string,
+	epoch = DEFAULT_EPOCH,
+	mode: SnowflakeMode = "default"
+) => {
 	const idBigInt = BigInt(id);
 
 	const timestamp = Number(idBigInt >> BigInt(TIMESTAMP_SHIFT)) + epoch;
