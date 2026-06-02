@@ -18,6 +18,7 @@
 ## ✨ Features
 
 - **Multi-platform Support**: Works in browsers, Node.js, Service Workers, and Edge Workers (Cloudflare Workers, etc.)
+- **Edge Mode (Entropy)**: Optional `mode: 'edge'` generates IDs with cryptographic randomness — no worker-id assignment needed for serverless/edge runtimes
 - **Zero Dependencies**: Lightweight with no external dependencies
 - **Functional Style**: Pure functions without classes
 - **Time-sortable**: IDs are chronologically sortable
@@ -60,6 +61,33 @@ const generateId = createSnowflake({
 
 const id = generateId();
 ```
+
+### Edge Mode (Entropy)
+
+For serverless / edge runtimes (e.g. Cloudflare Workers) where you **cannot assign a stable
+`workerId`** to each ephemeral isolate, use `mode: 'edge'`. Instead of an assigned
+`(datacenterId, workerId)` + sequence, the 22 non-timestamp bits are filled with
+**cryptographic randomness** (`crypto.getRandomValues`). This removes the need for any
+worker-id assignment and ensures uniqueness **probabilistically** via "timestamp + 22-bit entropy".
+
+```typescript
+import { createSnowflake } from '@tknf/snowflake';
+
+// No datacenterId / workerId required
+const generateId = createSnowflake({ mode: 'edge', epoch: 1640995200000 });
+const id = generateId(); // "1843927461029384756" (numeric string, chronologically sortable)
+```
+
+- `mode` defaults to `'default'` (the existing assigned worker-id behavior). `'edge'` is opt-in.
+- In edge mode `datacenterId` / `workerId` are **ignored** (even if provided).
+- The output is unchanged: a numeric string that fits a 63-bit positive integer (storable in a
+  SQLite / Turso `INTEGER` column) and remains chronologically sortable at millisecond granularity.
+
+> **Uniqueness is probabilistic.** 22 bits = 4,194,304 possibilities per millisecond. When
+> generating `k` IDs within the same millisecond the collision probability (birthday bound) is
+> approximately `k² / (2·2²²)` (e.g. ~0.12% at 100 IDs/ms). Because of this, consumers **should add
+> a DB `UNIQUE` constraint and retry-on-collision as a backstop** so that even a theoretical
+> collision causes no actual harm.
 
 ### Node.js Environment Variables
 
@@ -123,8 +151,9 @@ Creates a Snowflake ID generator function.
 **Parameters:**
 - `config` (optional): Configuration object
   - `epoch` (number): Custom epoch timestamp in milliseconds (default: 2020-01-01)
-  - `datacenterId` (number): Datacenter ID (0-31, default: 0)
-  - `workerId` (number): Worker ID (0-31, default: 0)
+  - `datacenterId` (number): Datacenter ID (0-31, default: 0). Ignored when `mode` is `'edge'`.
+  - `workerId` (number): Worker ID (0-31, default: 0). Ignored when `mode` is `'edge'`.
+  - `mode` (`'default' | 'edge'`): Generation mode (default: `'default'`). See [Edge Mode (Entropy)](#edge-mode-entropy).
 
 **Returns:** Function that generates Snowflake IDs as strings
 
@@ -154,32 +183,42 @@ const id = generateSnowflakeId({
 });
 ```
 
-#### `parseSnowflakeId(id, epoch?)`
+#### `parseSnowflakeId(id, epoch?, mode?)`
 
 Parses a Snowflake ID into its components.
 
 **Parameters:**
 - `id` (string): Snowflake ID to parse
 - `epoch` (number, optional): Epoch used for generation (default: 2020-01-01)
+- `mode` (`'default' | 'edge'`, optional): Mode the ID was generated with (default: `'default'`). Edge IDs are bit-indistinguishable from default IDs, so you must pass the mode you generated with.
 
-**Returns:** Object containing:
+**Returns (default mode):** Object containing:
 - `timestamp` (number): Generation timestamp
 - `datacenterId` (number): Datacenter ID
 - `workerId` (number): Worker ID
 - `sequence` (number): Sequence number
+- `entropy` (null): Always `null` in default mode
+- `date` (Date): Generation date
+
+**Returns (edge mode):** In edge mode the non-timestamp bits are random, so the worker fields are
+**meaningless**. They are returned as `null` and the raw 22-bit value is returned as `entropy`:
+- `timestamp` (number): Generation timestamp
+- `datacenterId` / `workerId` / `sequence` (null): Not meaningful in edge mode
+- `entropy` (number): The 22-bit random value (0–4,194,303)
 - `date` (Date): Generation date
 
 ```typescript
+// default mode
 const parsed = parseSnowflakeId("1234567890123456789");
-console.log(parsed);
-// {
-//   timestamp: 1640995200123,
-//   datacenterId: 1,
-//   workerId: 2,
-//   sequence: 0,
-//   date: 2022-01-01T00:00:00.123Z
-// }
+// { timestamp: 1640995200123, datacenterId: 1, workerId: 2, sequence: 0, entropy: null, date: ... }
+
+// edge mode
+const edgeParsed = parseSnowflakeId("1843927461029384756", 1640995200000, "edge");
+// { timestamp: ..., datacenterId: null, workerId: null, sequence: null, entropy: 4194301, date: ... }
 ```
+
+> `getSnowflakeTimestamp` and `snowflakeToDate` read only the timestamp bits, so they work
+> identically for both default and edge IDs (no `mode` argument needed).
 
 #### `getSnowflakeTimestamp(id, epoch?)`
 
@@ -344,6 +383,18 @@ unused   | timestamp | datacenter| worker   | sequence
 - **Worker ID (5 bits)**: Identifies the worker process (0-31)  
 - **Sequence (12 bits)**: Counter for same-millisecond generation (0-4095)
 
+In **edge mode** (`mode: 'edge'`), the `datacenter | worker | sequence` block is replaced by 22 bits
+of cryptographic randomness:
+
+```
+ 1 bit   |  41 bits  |        22 bits
+unused   | timestamp |   random entropy (crypto)
+  0      |  ms-epoch |   getRandomValues
+```
+
+- **Timestamp (41 bits)**: Milliseconds since custom epoch (same position as default mode)
+- **Entropy (22 bits)**: `crypto.getRandomValues` (0-4,194,303)
+
 ## 💡 Examples
 
 ### High-Frequency Generation
@@ -430,25 +481,30 @@ navigator.serviceWorker.controller.postMessage({
 });
 ```
 
-### Cloudflare Workers
+### Cloudflare Workers (Edge Mode)
+
+In Workers your code runs across many ephemeral isolates, so you cannot assign a stable `workerId`
+(reading `env.WORKER_ID` gives every isolate the same value, which risks collisions). Use
+`mode: 'edge'` so uniqueness comes from cryptographic entropy instead of an assigned worker number:
 
 ```typescript
-// Cloudflare Worker example
+import { createSnowflake } from '@tknf/snowflake';
+
+const generator = createSnowflake({ mode: 'edge', epoch: 1640995200000 });
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const generator = createSnowflake({
-      datacenterId: 1,
-      workerId: parseInt(env.WORKER_ID) || 0
-    });
-    
     const id = generator();
-    
+
     return new Response(JSON.stringify({ id }), {
       headers: { 'Content-Type': 'application/json' }
     });
   }
 };
 ```
+
+> Edge mode is probabilistic — pair it with a DB `UNIQUE` constraint and retry-on-collision
+> (e.g. when using a single-writer Turso/SQLite). See [Edge Mode (Entropy)](#edge-mode-entropy).
 
 ### Browser Fingerprinting
 
