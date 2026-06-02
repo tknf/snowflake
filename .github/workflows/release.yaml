@@ -14,14 +14,13 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
-      - uses: pnpm/action-setup@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          version: 10
-      - run: pnpm install
-      - run: pnpm run build
-      - run: pnpm run lint
-      - run: pnpm run format
-      - run: pnpm run test
-      - run: pnpm publish --access public --no-git-checks
+          cache: true
+      - run: vp install
+      - run: vp pack
+      - run: vp check
+      - run: vp test run
+      - run: vp pm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

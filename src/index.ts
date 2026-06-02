@@ -29,7 +29,6 @@ const DEFAULT_EPOCH = 1577836800000;
 /**
  * Bit lengths for ID components
  */
-const TIMESTAMP_BITS = 41;
 const DATACENTER_BITS = 5;
 const WORKER_BITS = 5;
 const SEQUENCE_BITS = 12;
@@ -50,7 +49,6 @@ const MAX_ENTROPY = (1 << ENTROPY_BITS) - 1; // 4194303
 /**
  * Bit shifts for ID components
  */
-const SEQUENCE_SHIFT = 0;
 const WORKER_SHIFT = SEQUENCE_BITS;
 const DATACENTER_SHIFT = SEQUENCE_BITS + WORKER_BITS;
 const TIMESTAMP_SHIFT = SEQUENCE_BITS + WORKER_BITS + DATACENTER_BITS;

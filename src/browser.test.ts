@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import {
 	BROWSER_CONFIG_KEYS,
 	clearStoredConfig,
@@ -204,6 +204,14 @@ describe("Browser Utilities", () => {
 			expect(localStorageMock.getItem(BROWSER_CONFIG_KEYS.DATACENTER_ID)).toBe("5");
 			expect(localStorageMock.getItem(BROWSER_CONFIG_KEYS.EPOCH)).toBeNull();
 			expect(localStorageMock.getItem(BROWSER_CONFIG_KEYS.WORKER_ID)).toBeNull();
+		});
+
+		it("should skip datacenterId when it is undefined", () => {
+			saveConfigToStorage({ epoch: 1234567890000, workerId: 10 });
+
+			expect(localStorageMock.getItem(BROWSER_CONFIG_KEYS.EPOCH)).toBe("1234567890000");
+			expect(localStorageMock.getItem(BROWSER_CONFIG_KEYS.DATACENTER_ID)).toBeNull();
+			expect(localStorageMock.getItem(BROWSER_CONFIG_KEYS.WORKER_ID)).toBe("10");
 		});
 
 		it("should handle missing localStorage gracefully", () => {

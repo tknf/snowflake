@@ -3,27 +3,28 @@
 	"version": "1.0.2",
 	"description": "A zero-dependency TypeScript library for generating sortable unique IDs for distributed systems",
 	"keywords": [
+		"distributed",
+		"generator",
 		"id",
 		"snowflake",
-		"distributed",
 		"typescript",
-		"uuid",
-		"generator"
+		"uuid"
 	],
+	"license": "MIT",
+	"author": "tknf <dev@tknf.net>",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/tknf/snowflake.git"
 	},
-	"publishConfig": {
-		"access": "public",
-		"registry": "https://registry.npmjs.org/"
-	},
-	"license": "MIT",
-	"author": "tknf <dev@tknf.net>",
+	"files": [
+		"dist"
+	],
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
+	"unpkg": "./dist/snowflake.min.js",
+	"jsdelivr": "./dist/snowflake.min.js",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -41,26 +42,27 @@
 			"require": "./dist/browser.cjs"
 		}
 	},
-	"files": [
-		"dist"
-	],
-	"unpkg": "./dist/snowflake.min.js",
-	"jsdelivr": "./dist/snowflake.min.js",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
 	"scripts": {
-		"build": "tsup",
-		"test": "vitest run",
-		"test:coverage": "vitest run --coverage",
-		"lint": "biome lint",
-		"format": "biome format",
-		"typecheck": "tsc --noEmit",
-		"prepublishOnly": "npm run build && npm run typecheck && npm run lint"
+		"build": "vp pack",
+		"test": "vp test run",
+		"test:coverage": "vp test run --coverage",
+		"lint": "vp lint",
+		"format": "vp fmt",
+		"check": "vp check",
+		"typecheck": "vp check --no-fmt --no-lint",
+		"prepublishOnly": "vp pack && vp check",
+		"prepare": "vp config"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
 		"@types/node": "^24.0.3",
-		"@vitest/coverage-v8": "^3.2.3",
-		"tsup": "^8.5.0",
+		"@vitest/coverage-v8": "^4.1.8",
 		"typescript": "^5.8.3",
-		"vitest": "^3.2.3"
-	}
+		"vite-plus": "catalog:",
+		"vitest": "catalog:"
+	},
+	"packageManager": "pnpm@11.5.1"
 }
