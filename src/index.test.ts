@@ -3,7 +3,9 @@ import {
 	createSnowflake,
 	generateSnowflakeId,
 	getSnowflakeTimestamp,
+	isValidSnowflakeId,
 	parseSnowflakeId,
+	safeParseSnowflakeId,
 	type SnowflakeConfig,
 	snowflakeToDate,
 } from "./index.js";
@@ -139,6 +141,34 @@ describe("Snowflake ID Generator", () => {
 			vi.restoreAllMocks();
 		});
 
+		it("未来の epoch を指定すると例外を投げる", () => {
+			expect(() => createSnowflake({ epoch: Date.now() + 1000000 })).toThrow(
+				"Epoch must not be in the future"
+			);
+		});
+
+		it("負の epoch を指定すると例外を投げる", () => {
+			expect(() => createSnowflake({ epoch: -1 })).toThrow("Epoch must not be negative");
+		});
+
+		it("非整数の epoch を指定すると例外を投げる", () => {
+			expect(() => createSnowflake({ epoch: 1.5 })).toThrow(
+				"Epoch must be an integer timestamp in milliseconds"
+			);
+		});
+
+		it("edge モードでも未来の epoch を指定すると例外を投げる", () => {
+			expect(() => createSnowflake(createEdgeConfig({ epoch: Date.now() + 1000000 }))).toThrow(
+				"Epoch must not be in the future"
+			);
+		});
+
+		it("有効な過去の epoch では正常に生成され ID が負にならない", () => {
+			const generator = createSnowflake({ epoch: 1577836800000 });
+			const id = generator();
+			expect(id.startsWith("-")).toBe(false);
+		});
+
 		it("should throw error when clock moves backwards", () => {
 			const generator = createSnowflake();
 
@@ -169,6 +199,38 @@ describe("Snowflake ID Generator", () => {
 			const parsed = parseSnowflakeId(id);
 			expect(parsed.datacenterId).toBe(1);
 			expect(parsed.workerId).toBe(2);
+		});
+
+		it("同一ミリ秒内で連続呼び出ししても異なる ID になる", () => {
+			const fixed = Date.now();
+			vi.spyOn(Date, "now").mockReturnValue(fixed);
+
+			const config = { datacenterId: 3, workerId: 4 };
+			const id1 = generateSnowflakeId(config);
+			const id2 = generateSnowflakeId(config);
+
+			vi.restoreAllMocks();
+
+			expect(id1).not.toBe(id2);
+		});
+
+		it("同一設定で 1000 回連続呼び出ししても全件ユニークになる", () => {
+			const config = { datacenterId: 6, workerId: 7 };
+			const ids = Array.from({ length: 1000 }, () => generateSnowflakeId(config));
+
+			expect(new Set(ids).size).toBe(ids.length);
+		});
+
+		it("異なる設定では別のジェネレータが使われ、workerId が反映される", () => {
+			const idA = generateSnowflakeId({ datacenterId: 8, workerId: 9 });
+			const idB = generateSnowflakeId({ datacenterId: 8, workerId: 10 });
+
+			const parsedA = parseSnowflakeId(idA);
+			const parsedB = parseSnowflakeId(idB);
+
+			expect(parsedA.workerId).toBe(9);
+			expect(parsedB.workerId).toBe(10);
+			expect(idA).not.toBe(idB);
 		});
 	});
 
@@ -271,6 +333,91 @@ describe("Snowflake ID Generator", () => {
 			const id = generateSnowflakeId();
 			const date = snowflakeToDate(id);
 			expect(date.getTime()).toBeGreaterThan(1577836800000);
+		});
+	});
+
+	describe("isValidSnowflakeId", () => {
+		it("生成した有効な ID は true を返す", () => {
+			const id = generateSnowflakeId();
+			expect(isValidSnowflakeId(id)).toBe(true);
+		});
+
+		it("'0' は true を返す", () => {
+			expect(isValidSnowflakeId("0")).toBe(true);
+		});
+
+		it("文字列以外が渡された場合は false を返す（実行時の型不正への防御）", () => {
+			const isValidSnowflakeIdUnsafe = isValidSnowflakeId as (id: unknown) => boolean;
+			expect(isValidSnowflakeIdUnsafe(123)).toBe(false);
+		});
+
+		it.each(["abc", "", "-1", "1.5", " 1", (2n ** 63n).toString()])(
+			"'%s' は false を返す",
+			(input) => {
+				expect(isValidSnowflakeId(input)).toBe(false);
+			}
+		);
+	});
+
+	describe("不正な ID を渡した場合のエラーハンドリング", () => {
+		it.each(["abc", "", "-1"])(
+			"parseSnowflakeId('%s') は Invalid Snowflake ID を含む Error を投げる",
+			(input) => {
+				expect(() => parseSnowflakeId(input)).toThrow(/Invalid Snowflake ID/);
+				try {
+					parseSnowflakeId(input);
+				} catch (e) {
+					expect(e).toBeInstanceOf(Error);
+					expect(e).not.toBeInstanceOf(SyntaxError);
+				}
+			}
+		);
+
+		it.each(["abc", "", "-1"])(
+			"getSnowflakeTimestamp('%s') は Invalid Snowflake ID を含む Error を投げる",
+			(input) => {
+				expect(() => getSnowflakeTimestamp(input)).toThrow(/Invalid Snowflake ID/);
+				try {
+					getSnowflakeTimestamp(input);
+				} catch (e) {
+					expect(e).toBeInstanceOf(Error);
+					expect(e).not.toBeInstanceOf(SyntaxError);
+				}
+			}
+		);
+
+		it.each(["abc", "", "-1"])(
+			"snowflakeToDate('%s') は Invalid Snowflake ID を含む Error を投げる",
+			(input) => {
+				expect(() => snowflakeToDate(input)).toThrow(/Invalid Snowflake ID/);
+				try {
+					snowflakeToDate(input);
+				} catch (e) {
+					expect(e).toBeInstanceOf(Error);
+					expect(e).not.toBeInstanceOf(SyntaxError);
+				}
+			}
+		);
+	});
+
+	describe("safeParseSnowflakeId", () => {
+		it.each(["abc", "", "-1"])("不正な ID '%s' の場合は null を返す", (input) => {
+			expect(safeParseSnowflakeId(input)).toBeNull();
+		});
+
+		it("有効な ID の場合は parseSnowflakeId と同一の結果を返す", () => {
+			const config = { epoch: 1577836800000, datacenterId: 5, workerId: 10 };
+			const generator = createSnowflake(config);
+			const id = generator();
+
+			expect(safeParseSnowflakeId(id, config.epoch)).toEqual(parseSnowflakeId(id, config.epoch));
+		});
+
+		it("edge モードでも従来どおり動く", () => {
+			const epoch = 1640995200000;
+			const id = createSnowflake(createEdgeConfig({ epoch }))();
+
+			expect(safeParseSnowflakeId(id, epoch, "edge")).toEqual(parseSnowflakeId(id, epoch, "edge"));
 		});
 	});
 

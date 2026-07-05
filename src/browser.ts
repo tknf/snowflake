@@ -1,5 +1,5 @@
 import type { SnowflakeConfig } from "./index.js";
-import { createSnowflake } from "./index.js";
+import { createSnowflake, generateSnowflakeId } from "./index.js";
 
 /**
  * Browser-specific configuration keys for localStorage
@@ -12,6 +12,12 @@ export const BROWSER_CONFIG_KEYS = {
 
 /**
  * Generate a browser-specific worker ID based on various browser characteristics
+ *
+ * Note: This ID is derived from a browser fingerprint, so multiple tabs of the same
+ * browser (or environments with identical characteristics) can end up with the same
+ * worker ID, and each tab keeps its own independent sequence state. This can cause ID
+ * collisions within the same millisecond across tabs. If you need to generate IDs from
+ * multiple concurrent contexts, prefer `mode: "edge"` instead.
  */
 const generateBrowserWorkerId = (): number => {
 	const navigator = globalThis.navigator;
@@ -19,7 +25,9 @@ const generateBrowserWorkerId = (): number => {
 
 	if (!navigator || !screen) {
 		// Fallback for environments without navigator/screen
-		return Math.floor(Math.random() * 32);
+		const buffer = new Uint32Array(1);
+		crypto.getRandomValues(buffer);
+		return buffer[0] & 31;
 	}
 
 	// Create a simple hash from browser characteristics
@@ -45,6 +53,11 @@ const generateBrowserWorkerId = (): number => {
 
 /**
  * Generate a datacenter ID based on timezone and other factors
+ *
+ * Note: This ID is derived from a browser fingerprint (timezone), so multiple tabs of
+ * the same browser (or environments with identical characteristics) can end up with the
+ * same datacenter ID. If you need to generate IDs from multiple concurrent contexts,
+ * prefer `mode: "edge"` instead.
  */
 const generateBrowserDatacenterId = (): number => {
 	const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -98,12 +111,16 @@ export const loadConfigFromStorage = (): SnowflakeConfig => {
 	const epochStr = localStorage.getItem(BROWSER_CONFIG_KEYS.EPOCH);
 	if (epochStr) {
 		const epoch = Number.parseInt(epochStr, 10);
-		if (!Number.isNaN(epoch)) {
-			config.epoch = epoch;
-		} else {
+		if (Number.isNaN(epoch)) {
 			console.warn(
 				`localStorage value for ${BROWSER_CONFIG_KEYS.EPOCH} must be a valid integer timestamp`
 			);
+		} else if (epoch < 0) {
+			console.warn(`localStorage value for ${BROWSER_CONFIG_KEYS.EPOCH} must not be negative`);
+		} else if (epoch > Date.now()) {
+			console.warn(`localStorage value for ${BROWSER_CONFIG_KEYS.EPOCH} must not be in the future`);
+		} else {
+			config.epoch = epoch;
 		}
 	}
 
@@ -138,6 +155,10 @@ export const saveConfigToStorage = (config: SnowflakeConfig): void => {
 
 /**
  * Generate browser-specific configuration automatically
+ *
+ * Note: Fingerprint-derived IDs can collide across multiple tabs of the same browser
+ * or environments with identical characteristics. If you need to generate IDs from
+ * multiple concurrent contexts, prefer `mode: "edge"` instead.
  */
 export const generateBrowserConfig = (): SnowflakeConfig => {
 	return {
@@ -149,6 +170,10 @@ export const generateBrowserConfig = (): SnowflakeConfig => {
 /**
  * Create a Snowflake ID generator with configuration loaded from localStorage,
  * with automatic browser-specific fallbacks
+ *
+ * Note: Fingerprint-derived IDs can collide across multiple tabs of the same browser
+ * or environments with identical characteristics. If you need to generate IDs from
+ * multiple concurrent contexts, prefer `mode: "edge"` instead.
  */
 export const createSnowflakeFromStorage = (overrides: SnowflakeConfig = {}) => {
 	const storageConfig = loadConfigFromStorage();
@@ -166,10 +191,26 @@ export const createSnowflakeFromStorage = (overrides: SnowflakeConfig = {}) => {
 
 /**
  * Generate a single Snowflake ID with configuration from localStorage and browser characteristics
+ *
+ * Delegates to `generateSnowflakeId`, which shares a cached generator per
+ * resolved config, so consecutive calls remain unique within the same millisecond.
+ *
+ * Note: Fingerprint-derived IDs can collide across multiple tabs of the same browser
+ * or environments with identical characteristics. If you need to generate IDs from
+ * multiple concurrent contexts, prefer `mode: "edge"` instead.
  */
 export const generateFromStorage = (overrides: SnowflakeConfig = {}): string => {
-	const generator = createSnowflakeFromStorage(overrides);
-	return generator();
+	const storageConfig = loadConfigFromStorage();
+	const browserConfig = generateBrowserConfig();
+
+	// Merge configs: overrides > localStorage > browser-generated > defaults
+	const finalConfig: SnowflakeConfig = {
+		...browserConfig,
+		...storageConfig,
+		...overrides,
+	};
+
+	return generateSnowflakeId(finalConfig);
 };
 
 /**
@@ -208,6 +249,9 @@ export const clearStoredConfig = (): void => {
 
 /**
  * Get current browser fingerprint for debugging
+ *
+ * This is intended for debugging/diagnostic purposes only, not as a source of
+ * cryptographically unique identifiers.
  */
 export const getBrowserFingerprint = (): {
 	datacenterId: number;

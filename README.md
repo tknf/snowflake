@@ -289,6 +289,11 @@ const id = generateFromEnv({ datacenterId: 2 });
 
 Import from `@tknf/snowflake/browser` for browser-specific features:
 
+> Fingerprint-derived IDs (datacenter/worker) can collide across multiple tabs of the
+> same browser or environments with identical characteristics, since sequence state is
+> independent per tab. If you generate IDs from multiple concurrent contexts, prefer
+> `mode: 'edge'` instead. See [Edge Mode (Entropy)](#edge-mode-entropy).
+
 #### LocalStorage Keys
 
 - `snowflake.epoch`: Custom epoch timestamp
