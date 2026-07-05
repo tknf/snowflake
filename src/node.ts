@@ -1,5 +1,5 @@
 import type { SnowflakeConfig } from "./index.js";
-import { createSnowflake } from "./index.js";
+import { createSnowflake, generateSnowflakeId } from "./index.js";
 
 /**
  * Environment variable names for Snowflake configuration
@@ -44,6 +44,12 @@ export const loadConfigFromEnv = (): SnowflakeConfig => {
 		if (Number.isNaN(epoch)) {
 			throw new Error(`Environment variable ${ENV_VARS.EPOCH} must be a valid integer timestamp`);
 		}
+		if (epoch < 0) {
+			throw new Error(`Environment variable ${ENV_VARS.EPOCH} must not be negative`);
+		}
+		if (epoch > Date.now()) {
+			throw new Error(`Environment variable ${ENV_VARS.EPOCH} must not be in the future`);
+		}
 		config.epoch = epoch;
 	}
 
@@ -72,8 +78,12 @@ export const createSnowflakeFromEnv = (overrides: SnowflakeConfig = {}) => {
 
 /**
  * Generate a single Snowflake ID with configuration from environment variables
+ *
+ * Delegates to `generateSnowflakeId`, which shares a cached generator per
+ * resolved config, so consecutive calls remain unique within the same millisecond.
  */
 export const generateFromEnv = (overrides: SnowflakeConfig = {}): string => {
-	const generator = createSnowflakeFromEnv(overrides);
-	return generator();
+	const envConfig = loadConfigFromEnv();
+	const finalConfig = { ...envConfig, ...overrides };
+	return generateSnowflakeId(finalConfig);
 };

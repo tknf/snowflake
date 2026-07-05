@@ -69,6 +69,20 @@ describe("Node.js Utilities", () => {
 			);
 		});
 
+		it("未来の epoch を指定すると例外を投げる", () => {
+			process.env[ENV_VARS.EPOCH] = String(Date.now() + 1000000);
+			expect(() => loadConfigFromEnv()).toThrow(
+				"Environment variable SNOWFLAKE_EPOCH must not be in the future"
+			);
+		});
+
+		it("負の epoch を指定すると例外を投げる", () => {
+			process.env[ENV_VARS.EPOCH] = "-1";
+			expect(() => loadConfigFromEnv()).toThrow(
+				"Environment variable SNOWFLAKE_EPOCH must not be negative"
+			);
+		});
+
 		it("should throw error for invalid datacenter ID", () => {
 			process.env[ENV_VARS.DATACENTER_ID] = "invalid";
 			expect(() => loadConfigFromEnv()).toThrow(
@@ -182,6 +196,16 @@ describe("Node.js Utilities", () => {
 			const id = generateFromEnv();
 			expect(typeof id).toBe("string");
 			expect(id.length).toBeGreaterThan(0);
+		});
+
+		it("同一ミリ秒内で連続呼び出ししても異なる ID になる", () => {
+			process.env[ENV_VARS.DATACENTER_ID] = "9";
+			process.env[ENV_VARS.WORKER_ID] = "11";
+
+			const id1 = generateFromEnv();
+			const id2 = generateFromEnv();
+
+			expect(id1).not.toBe(id2);
 		});
 	});
 

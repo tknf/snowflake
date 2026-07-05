@@ -11,7 +11,11 @@ export type SnowflakeMode = "default" | "edge";
  * Snowflake ID configuration
  */
 export interface SnowflakeConfig {
-	/** Custom epoch in milliseconds (defaults to 2020-01-01T00:00:00.000Z) */
+	/**
+	 * Custom epoch in milliseconds (defaults to 2020-01-01T00:00:00.000Z)
+	 *
+	 * Must be an integer, non-negative, and not in the future (i.e. `<= Date.now()`).
+	 */
 	epoch?: number;
 	/** Datacenter ID (0-31). Ignored when `mode` is `"edge"`. */
 	datacenterId?: number;
@@ -69,6 +73,17 @@ const generateEntropy = (): number => {
  */
 export const createSnowflake = (config: SnowflakeConfig = {}) => {
 	const { epoch = DEFAULT_EPOCH, datacenterId = 0, workerId = 0, mode = "default" } = config;
+
+	// Validate epoch (applies to both "default" and "edge" modes)
+	if (!Number.isInteger(epoch)) {
+		throw new Error("Epoch must be an integer timestamp in milliseconds");
+	}
+	if (epoch < 0) {
+		throw new Error("Epoch must not be negative");
+	}
+	if (epoch > Date.now()) {
+		throw new Error("Epoch must not be in the future");
+	}
 
 	// Edge mode: fill the non-timestamp bits with cryptographic randomness.
 	// datacenterId / workerId are ignored (and not validated) in this mode.
@@ -129,11 +144,45 @@ export const createSnowflake = (config: SnowflakeConfig = {}) => {
 };
 
 /**
+ * Cache of generators keyed by resolved config, so repeated calls to
+ * `generateSnowflakeId` with equivalent configs share sequence state.
+ */
+const generatorCache = new Map<string, () => string>();
+
+/**
  * Generate a single Snowflake ID with default configuration
+ *
+ * Generators for the same resolved config are shared internally (cached by
+ * `epoch`, `datacenterId`, `workerId`, and `mode`), so consecutive calls
+ * preserve sequence state and remain unique even within the same millisecond.
  */
 export const generateSnowflakeId = (config: SnowflakeConfig = {}): string => {
-	const generator = createSnowflake(config);
+	const { epoch = DEFAULT_EPOCH, datacenterId = 0, workerId = 0, mode = "default" } = config;
+	const key = `${epoch}|${datacenterId}|${workerId}|${mode}`;
+
+	let generator = generatorCache.get(key);
+	if (!generator) {
+		generator = createSnowflake(config);
+		generatorCache.set(key, generator);
+	}
+
 	return generator();
+};
+
+/**
+ * Check whether a string is a valid Snowflake ID.
+ *
+ * A valid Snowflake ID is a non-negative integer string (digits only, no sign,
+ * no decimal point) that fits within 63 bits (i.e. `< 2n ** 63n`).
+ */
+export const isValidSnowflakeId = (id: string): boolean => {
+	if (typeof id !== "string") {
+		return false;
+	}
+	if (!/^\d+$/.test(id)) {
+		return false;
+	}
+	return BigInt(id) < 2n ** 63n;
 };
 
 /**
@@ -142,12 +191,18 @@ export const generateSnowflakeId = (config: SnowflakeConfig = {}): string => {
  * In `"edge"` mode the non-timestamp bits are random, so `datacenterId`, `workerId`,
  * and `sequence` are returned as `null` and the raw 22-bit value is returned as `entropy`.
  * In `"default"` mode the worker fields are returned and `entropy` is `null`.
+ *
+ * @throws {Error} if `id` is not a valid Snowflake ID
  */
 export const parseSnowflakeId = (
 	id: string,
 	epoch = DEFAULT_EPOCH,
 	mode: SnowflakeMode = "default"
 ) => {
+	if (!isValidSnowflakeId(id)) {
+		throw new Error(`Invalid Snowflake ID: ${id}`);
+	}
+
 	const idBigInt = BigInt(id);
 
 	const timestamp = Number(idBigInt >> BigInt(TIMESTAMP_SHIFT)) + epoch;
@@ -180,16 +235,43 @@ export const parseSnowflakeId = (
 };
 
 /**
+ * Parse a Snowflake ID into its components without throwing.
+ *
+ * Same arguments and return shape as `parseSnowflakeId`, but returns `null`
+ * instead of throwing when `id` is not a valid Snowflake ID.
+ */
+export const safeParseSnowflakeId = (
+	id: string,
+	epoch = DEFAULT_EPOCH,
+	mode: SnowflakeMode = "default"
+): ReturnType<typeof parseSnowflakeId> | null => {
+	if (!isValidSnowflakeId(id)) {
+		return null;
+	}
+	return parseSnowflakeId(id, epoch, mode);
+};
+
+/**
  * Get the timestamp from a Snowflake ID
+ *
+ * @throws {Error} if `id` is not a valid Snowflake ID
  */
 export const getSnowflakeTimestamp = (id: string, epoch = DEFAULT_EPOCH): number => {
+	if (!isValidSnowflakeId(id)) {
+		throw new Error(`Invalid Snowflake ID: ${id}`);
+	}
 	const idBigInt = BigInt(id);
 	return Number(idBigInt >> BigInt(TIMESTAMP_SHIFT)) + epoch;
 };
 
 /**
  * Convert Snowflake ID to Date object
+ *
+ * @throws {Error} if `id` is not a valid Snowflake ID
  */
 export const snowflakeToDate = (id: string, epoch = DEFAULT_EPOCH): Date => {
+	if (!isValidSnowflakeId(id)) {
+		throw new Error(`Invalid Snowflake ID: ${id}`);
+	}
 	return new Date(getSnowflakeTimestamp(id, epoch));
 };

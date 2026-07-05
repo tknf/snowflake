@@ -128,6 +128,33 @@ describe("Browser Utilities", () => {
 			expect(config.workerId).toBeLessThanOrEqual(31);
 		});
 
+		it("navigator/screen が無い場合、crypto.getRandomValues ベースで 0-31 の workerId を返す", () => {
+			Object.defineProperty(globalThis, "navigator", {
+				value: undefined,
+				writable: true,
+			});
+			Object.defineProperty(globalThis, "screen", {
+				value: undefined,
+				writable: true,
+			});
+
+			const getRandomValuesSpy = vi.spyOn(crypto, "getRandomValues").mockImplementation(((
+				array: Uint32Array
+			) => {
+				array[0] = 0xffffffff;
+				return array;
+			}) as typeof crypto.getRandomValues);
+
+			const config = generateBrowserConfig();
+
+			expect(getRandomValuesSpy).toHaveBeenCalled();
+			expect(config.workerId).toBe(0xffffffff & 31);
+			expect(config.workerId).toBeGreaterThanOrEqual(0);
+			expect(config.workerId).toBeLessThanOrEqual(31);
+
+			getRandomValuesSpy.mockRestore();
+		});
+
 		it("should handle partial navigator/screen properties", () => {
 			// Test navigator with missing properties
 			Object.defineProperty(globalThis, "navigator", {
@@ -274,6 +301,36 @@ describe("Browser Utilities", () => {
 			expect(result).toBeUndefined();
 			expect(consoleSpy).toHaveBeenCalledWith(
 				"localStorage value for test-key must be between 0 and 31"
+			);
+
+			consoleSpy.mockRestore();
+		});
+	});
+
+	describe("loadConfigFromStorage の epoch 検証", () => {
+		it("未来の epoch は warn されて無視される", () => {
+			localStorageMock.setItem(BROWSER_CONFIG_KEYS.EPOCH, String(Date.now() + 1000000));
+			const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			const config = loadConfigFromStorage();
+
+			expect(config.epoch).toBeUndefined();
+			expect(consoleSpy).toHaveBeenCalledWith(
+				`localStorage value for ${BROWSER_CONFIG_KEYS.EPOCH} must not be in the future`
+			);
+
+			consoleSpy.mockRestore();
+		});
+
+		it("負の epoch は warn されて無視される", () => {
+			localStorageMock.setItem(BROWSER_CONFIG_KEYS.EPOCH, "-1");
+			const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			const config = loadConfigFromStorage();
+
+			expect(config.epoch).toBeUndefined();
+			expect(consoleSpy).toHaveBeenCalledWith(
+				`localStorage value for ${BROWSER_CONFIG_KEYS.EPOCH} must not be negative`
 			);
 
 			consoleSpy.mockRestore();
@@ -438,6 +495,16 @@ describe("Browser Utilities", () => {
 			const { parseSnowflakeId } = await import("./index.js");
 			const parsed = parseSnowflakeId(id);
 			expect(parsed.datacenterId).toBe(25); // Override applied
+		});
+
+		it("同一ミリ秒内で連続呼び出ししても異なる ID になる", () => {
+			localStorageMock.setItem(BROWSER_CONFIG_KEYS.DATACENTER_ID, "13");
+			localStorageMock.setItem(BROWSER_CONFIG_KEYS.WORKER_ID, "14");
+
+			const id1 = generateFromStorage({ datacenterId: 13, workerId: 14 });
+			const id2 = generateFromStorage({ datacenterId: 13, workerId: 14 });
+
+			expect(id1).not.toBe(id2);
 		});
 	});
 
