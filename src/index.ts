@@ -10,8 +10,8 @@
  *   throws for it — generation always continues. Because each ID already carries 22 bits of
  *   entropy, the collision risk from a backwards clock jump is negligible in practice, and
  *   edge mode's purpose is to keep generating IDs without throwing in ephemeral runtimes.
- *   If you need strict monotonicity even under clock skew, see the planned monotonic edge
- *   mode (tracked in issue #17).
+ *   If you need strict monotonicity even under clock skew, enable `monotonic: true`
+ *   (see {@link SnowflakeConfig.monotonic}).
  */
 export type SnowflakeMode = "default" | "edge";
 
@@ -31,6 +31,18 @@ export interface SnowflakeConfig {
 	workerId?: number;
 	/** Generation mode (defaults to `"default"`) */
 	mode?: SnowflakeMode;
+	/**
+	 * Enable monotonic entropy for `"edge"` mode (defaults to `false`).
+	 *
+	 * When `true`, IDs generated within the same millisecond by the same generator
+	 * increment the entropy value instead of drawing a fresh random one, guaranteeing
+	 * strict uniqueness and generation-order sortability within that generator.
+	 * Across separate generators (or separate isolates), uniqueness remains
+	 * probabilistic as in regular edge mode.
+	 *
+	 * Only meaningful when `mode` is `"edge"`; it is ignored in `"default"` mode.
+	 */
+	monotonic?: boolean;
 }
 
 /**
@@ -80,7 +92,13 @@ const generateEntropy = (): number => {
  * Create a Snowflake ID generator function
  */
 export const createSnowflake = (config: SnowflakeConfig = {}) => {
-	const { epoch = DEFAULT_EPOCH, datacenterId = 0, workerId = 0, mode = "default" } = config;
+	const {
+		epoch = DEFAULT_EPOCH,
+		datacenterId = 0,
+		workerId = 0,
+		mode = "default",
+		monotonic = false,
+	} = config;
 
 	// Validate epoch (applies to both "default" and "edge" modes)
 	if (!Number.isInteger(epoch)) {
@@ -96,9 +114,45 @@ export const createSnowflake = (config: SnowflakeConfig = {}) => {
 	// Edge mode: fill the non-timestamp bits with cryptographic randomness.
 	// datacenterId / workerId are ignored (and not validated) in this mode.
 	if (mode === "edge") {
+		if (!monotonic) {
+			return (): string => {
+				const timestamp = Date.now();
+				const id =
+					(BigInt(timestamp - epoch) << BigInt(TIMESTAMP_SHIFT)) | BigInt(generateEntropy());
+				return id.toString();
+			};
+		}
+
+		// Monotonic edge mode: increment entropy within the same millisecond to
+		// guarantee strict uniqueness and generation-order sortability for this
+		// generator. Clock-backwards jumps do not throw; `lastTimestamp` is kept
+		// so IDs stay monotonically non-decreasing instead of risking a duplicate.
+		let lastTimestamp = -1;
+		let lastEntropy = 0;
+
 		return (): string => {
-			const timestamp = Date.now();
-			const id = (BigInt(timestamp - epoch) << BigInt(TIMESTAMP_SHIFT)) | BigInt(generateEntropy());
+			let timestamp = Date.now();
+
+			if (timestamp < lastTimestamp) {
+				timestamp = lastTimestamp;
+			}
+
+			if (timestamp === lastTimestamp) {
+				lastEntropy += 1;
+				// Entropy space exhausted for this millisecond; wait for the next one.
+				if (lastEntropy > MAX_ENTROPY) {
+					while (timestamp <= lastTimestamp) {
+						timestamp = Date.now();
+					}
+					lastEntropy = generateEntropy();
+				}
+			} else {
+				lastEntropy = generateEntropy();
+			}
+
+			lastTimestamp = timestamp;
+
+			const id = (BigInt(timestamp - epoch) << BigInt(TIMESTAMP_SHIFT)) | BigInt(lastEntropy);
 			return id.toString();
 		};
 	}
@@ -161,12 +215,18 @@ const generatorCache = new Map<string, () => string>();
  * Generate a single Snowflake ID with default configuration
  *
  * Generators for the same resolved config are shared internally (cached by
- * `epoch`, `datacenterId`, `workerId`, and `mode`), so consecutive calls
- * preserve sequence state and remain unique even within the same millisecond.
+ * `epoch`, `datacenterId`, `workerId`, `mode`, and `monotonic`), so consecutive
+ * calls preserve sequence state and remain unique even within the same millisecond.
  */
 export const generateSnowflakeId = (config: SnowflakeConfig = {}): string => {
-	const { epoch = DEFAULT_EPOCH, datacenterId = 0, workerId = 0, mode = "default" } = config;
-	const key = `${epoch}|${datacenterId}|${workerId}|${mode}`;
+	const {
+		epoch = DEFAULT_EPOCH,
+		datacenterId = 0,
+		workerId = 0,
+		mode = "default",
+		monotonic = false,
+	} = config;
+	const key = `${epoch}|${datacenterId}|${workerId}|${mode}|${monotonic}`;
 
 	let generator = generatorCache.get(key);
 	if (!generator) {
