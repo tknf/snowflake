@@ -89,6 +89,30 @@ const id = generateId(); // "1843927461029384756" (numeric string, chronological
 > a DB `UNIQUE` constraint and retry-on-collision as a backstop** so that even a theoretical
 > collision causes no actual harm.
 
+#### Clock-backwards behavior
+
+- **`default` mode**: if the system clock moves backwards, `createSnowflake()` **throws** an
+  error (`"Clock moved backwards. Refusing to generate id"`) to avoid emitting a duplicate or
+  out-of-order ID.
+- **`edge` mode**: clock-backwards is **not** checked, and generation **continues** regardless.
+  This is intentional — edge mode's whole purpose is to keep working in ephemeral/serverless
+  environments without throwing, and the 22 bits of entropy already make the resulting
+  collision risk negligible.
+
+Approximate collision probability for `n` IDs generated within the same millisecond in edge
+mode (birthday approximation, `p ≈ n² / 2²³`):
+
+| IDs per millisecond | Collision probability |
+| -------------------- | ---------------------- |
+| 10                    | ~0.001%                |
+| 100                   | ~0.12%                 |
+| 1,000                 | ~11%                   |
+
+If you need to generate a large volume of IDs from a single long-lived process, prefer
+`default` mode (with an assigned `datacenterId` / `workerId`), which avoids this probabilistic
+risk entirely. A monotonic edge mode that restores clock-backwards safety without requiring a
+stable worker id is planned (see [#17](https://github.com/tknf/snowflake/issues/17)).
+
 ### Node.js Environment Variables
 
 ```typescript

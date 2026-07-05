@@ -2,8 +2,16 @@
  * Snowflake ID generation mode
  *
  * - `"default"`: Ensures uniqueness via an assigned `(datacenterId, workerId)` and a sequence.
+ *   If the system clock moves backwards, the generator **throws** rather than risk emitting a
+ *   duplicate or out-of-order ID.
  * - `"edge"`: Fills the 22 non-timestamp bits with cryptographic randomness (entropy).
  *   Useful for serverless/edge environments where a stable worker number cannot be assigned.
+ *   Unlike `"default"`, this mode does **not** check for clock moving backwards and never
+ *   throws for it — generation always continues. Because each ID already carries 22 bits of
+ *   entropy, the collision risk from a backwards clock jump is negligible in practice, and
+ *   edge mode's purpose is to keep generating IDs without throwing in ephemeral runtimes.
+ *   If you need strict monotonicity even under clock skew, see the planned monotonic edge
+ *   mode (tracked in issue #17).
  */
 export type SnowflakeMode = "default" | "edge";
 
