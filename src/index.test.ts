@@ -575,4 +575,94 @@ describe("Snowflake ID Generator", () => {
 			expect(id).toMatch(/^\d+$/);
 		});
 	});
+
+	describe("monotonic edge モード", () => {
+		// 22bit エントロピーの最大値（datacenter + worker + sequence = 22bit）
+		const MAX_ENTROPY = 2 ** 22 - 1; // 4194303
+
+		it("10000 件生成しても全件ユニークになる", () => {
+			const generate = createSnowflake(createEdgeConfig({ monotonic: true }));
+			const ids = Array.from({ length: 10000 }, () => generate());
+
+			expect(new Set(ids).size).toBe(ids.length);
+		});
+
+		it("生成順と辞書順ソートが一致し単調増加する", () => {
+			const generate = createSnowflake(createEdgeConfig({ monotonic: true }));
+			const ids = Array.from({ length: 10000 }, () => generate());
+
+			for (let i = 1; i < ids.length; i++) {
+				expect(BigInt(ids[i])).toBeGreaterThan(BigInt(ids[i - 1]));
+			}
+		});
+
+		it("同一ミリ秒内ではエントロピーが 1 ずつインクリメントされる", () => {
+			const fixed = Date.now();
+			vi.spyOn(Date, "now").mockReturnValue(fixed);
+
+			const generate = createSnowflake(createEdgeConfig({ monotonic: true }));
+			const id1 = generate();
+			const id2 = generate();
+			const id3 = generate();
+
+			vi.restoreAllMocks();
+
+			expect(BigInt(id2) - BigInt(id1)).toBe(1n);
+			expect(BigInt(id3) - BigInt(id2)).toBe(1n);
+		});
+
+		it("同一ミリ秒で MAX_ENTROPY に到達すると次のミリ秒へ進む", () => {
+			const start = Date.now();
+			// Date.now は同一ミリ秒（start）を返し続け、エントロピー枯渇時の busy-wait でのみ
+			// 呼び出し回数を進めて次ミリ秒（start + 1）に到達させる（無限ループを避ける）。
+			// なお createSnowflake 内の epoch バリデーションでも Date.now が 1 回呼ばれる点を考慮する。
+			let callCount = 0;
+			vi.spyOn(Date, "now").mockImplementation(() => {
+				callCount += 1;
+				return callCount <= 4 ? start : start + 1;
+			});
+			// crypto.getRandomValues を MAX_ENTROPY - 1 に固定し、
+			// 1 回のインクリメントで MAX_ENTROPY へ到達させる（数百万回のループを回避）
+			vi.spyOn(crypto, "getRandomValues").mockImplementation(((buffer: Uint32Array) => {
+				buffer[0] = MAX_ENTROPY - 1;
+				return buffer;
+			}) as typeof crypto.getRandomValues);
+
+			const generate = createSnowflake(createEdgeConfig({ monotonic: true }));
+
+			const firstId = generate(); // lastEntropy = MAX_ENTROPY - 1
+			const secondId = generate(); // lastEntropy = MAX_ENTROPY（枯渇せずぎりぎり収まる）
+			const overflowedId = generate(); // 枯渇し、busy-wait を経て次ミリ秒へ
+
+			vi.restoreAllMocks();
+
+			expect(BigInt(secondId) - BigInt(firstId)).toBe(1n);
+
+			const firstTimestamp = getSnowflakeTimestamp(firstId);
+			const overflowedTimestamp = getSnowflakeTimestamp(overflowedId);
+			expect(overflowedTimestamp).toBeGreaterThan(firstTimestamp);
+			expect(BigInt(overflowedId)).toBeGreaterThan(BigInt(secondId));
+		});
+
+		it("クロック巻き戻り時も throw せず ID が単調増加する", () => {
+			const start = Date.now();
+			let current = start;
+			vi.spyOn(Date, "now").mockImplementation(() => current);
+
+			const generate = createSnowflake(createEdgeConfig({ monotonic: true }));
+
+			const id1 = generate();
+
+			// クロックを巻き戻す
+			current = start - 1000;
+			const id2 = generate();
+			const id3 = generate();
+
+			vi.restoreAllMocks();
+
+			expect(() => id2).not.toThrow();
+			expect(BigInt(id2)).toBeGreaterThan(BigInt(id1));
+			expect(BigInt(id3)).toBeGreaterThan(BigInt(id2));
+		});
+	});
 });

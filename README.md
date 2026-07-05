@@ -110,8 +110,34 @@ mode (birthday approximation, `p ≈ n² / 2²³`):
 
 If you need to generate a large volume of IDs from a single long-lived process, prefer
 `default` mode (with an assigned `datacenterId` / `workerId`), which avoids this probabilistic
-risk entirely. A monotonic edge mode that restores clock-backwards safety without requiring a
-stable worker id is planned (see [#17](https://github.com/tknf/snowflake/issues/17)).
+risk entirely. If you need strict monotonicity without a stable worker id, see
+[Monotonic edge mode](#monotonic-edge-mode) below.
+
+#### Monotonic edge mode
+
+Pass `monotonic: true` alongside `mode: 'edge'` to guarantee strict uniqueness and
+generation-order sortability **within a single generator**:
+
+```typescript
+import { createSnowflake } from '@tknf/snowflake';
+
+const generateId = createSnowflake({ mode: 'edge', monotonic: true });
+const id1 = generateId();
+const id2 = generateId();
+// id1 < id2 is guaranteed, even when generated within the same millisecond
+```
+
+- Within the same millisecond, instead of drawing a fresh random entropy value each time,
+  the generator increments the previous entropy value. This makes every ID produced by a
+  single `createSnowflake` generator strictly unique and sorted in generation order.
+- If the 22-bit entropy space is exhausted within a millisecond, the generator waits for
+  the next millisecond and draws a fresh random entropy value.
+- If the system clock moves backwards, the generator does **not** throw — it keeps using
+  the last observed timestamp so IDs keep increasing monotonically instead of duplicating
+  or going out of order.
+- Uniqueness and ordering guarantees apply **per generator**. Across multiple independent
+  generators (e.g. multiple edge isolates), uniqueness remains probabilistic, the same as
+  regular edge mode.
 
 ### Node.js Environment Variables
 
@@ -178,6 +204,7 @@ Creates a Snowflake ID generator function.
   - `datacenterId` (number): Datacenter ID (0-31, default: 0). Ignored when `mode` is `'edge'`.
   - `workerId` (number): Worker ID (0-31, default: 0). Ignored when `mode` is `'edge'`.
   - `mode` (`'default' | 'edge'`): Generation mode (default: `'default'`). See [Edge Mode (Entropy)](#edge-mode-entropy).
+  - `monotonic` (boolean): Enable monotonic entropy in `'edge'` mode (default: `false`). Ignored in `'default'` mode. See [Monotonic edge mode](#monotonic-edge-mode).
 
 **Returns:** Function that generates Snowflake IDs as strings
 
