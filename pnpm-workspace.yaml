@@ -1,9 +1,19 @@
 allowBuilds:
   esbuild: true
+# NOTE: `vp test run --coverage` 実行時に以下の警告が出る場合がある:
+#   Loaded vitest@0.1.24 and @vitest/coverage-v8@4.1.8 — Running mixed versions is not supported
+# これは vite-plus-test (vitest 互換ラッパー) 自体の package.json version (0.1.24) と
+# @vitest/coverage-v8 の version (4.x) を単純な文字列比較しているために出る誤検知。
+# vite-plus-test は内部的に vitest@4.1.8 をバンドルしており (package.json の
+# bundledVersions.vitest / peerDependencies["@vitest/coverage-v8"] が "4.1.8" で
+# 実際に一致)、テスト・カバレッジの実行自体には影響しない
+# (124 tests / coverage 100% で動作確認済み)。
+# vite-plus 側にこの表記差を解消する設定は現状存在しないため、ここでは対応せず
+# コメントとして記録するのみとする（issue #15）。
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
-  vite-plus: latest
+  vite: npm:@voidzero-dev/vite-plus-core@^0.1.24
+  vitest: npm:@voidzero-dev/vite-plus-test@^0.1.24
+  vite-plus: ^0.1.24
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
